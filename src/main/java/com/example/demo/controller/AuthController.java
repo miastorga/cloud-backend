@@ -8,6 +8,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -30,11 +31,11 @@ public class AuthController {
     @GetMapping("/public/auth/config")
     public ResponseEntity<Map<String, String>> getAuthConfig() {
         Map<String, String> config = new HashMap<>();
-        config.put("authority", String.format("https://%s.b2clogin.com/%s.onmicrosoft.com/%s", 
-            tenant, tenant, policy));
+        config.put("authority", String.format("https://%s.b2clogin.com/%s.onmicrosoft.com/%s",
+                tenant, tenant, policy));
         config.put("clientId", clientId);
         config.put("redirectUri", "http://localhost:3000/callback");
-        
+
         return ResponseEntity.ok(config);
     }
 
@@ -44,13 +45,14 @@ public class AuthController {
     @GetMapping("/auth/user")
     public ResponseEntity<Map<String, Object>> getUserInfo(@AuthenticationPrincipal Jwt jwt) {
         log.info("Usuario autenticado: {}", jwt.getSubject());
-        
+
         Map<String, Object> userInfo = new HashMap<>();
         userInfo.put("id", jwt.getSubject());
-        userInfo.put("name", jwt.getClaim("name"));
-        userInfo.put("email", jwt.getClaim("emails"));
+        userInfo.put("name", jwt.getClaim("given_name"));
+        List<String> emails = jwt.getClaim("emails");
+        userInfo.put("email", (emails != null && !emails.isEmpty()) ? emails.get(0) : null);
         userInfo.put("claims", jwt.getClaims());
-        
+
         return ResponseEntity.ok(userInfo);
     }
 
