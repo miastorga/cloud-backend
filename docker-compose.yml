@@ -1,0 +1,32 @@
+services:
+  # oracle-db-local:
+  #   image: gvenzl/oracle-xe
+  #   container_name: oracle-db-local
+  #   ports:
+  #     - "1521:1521"
+  #   environment:
+  #     - ORACLE_PASSWORD=transporte_pass
+  #     - APP_USER=transporte_user
+  #     - APP_USER_PASSWORD=transporte_pass
+  #   volumes:
+  #     - oracle_data:/opt/oracle/oradata
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "sqlplus -L system/transporte_pass@//localhost:1521/xepdb1 'select 1 from dual;'"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 10
+  #     start_period: 30s
+
+  backend:
+    build: .
+    container_name: backend-local
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    # depends_on:
+    #   oracle-db-local:
+    #     condition: service_healthy
+
+volumes:
+  oracle_data:
