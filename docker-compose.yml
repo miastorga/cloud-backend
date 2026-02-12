@@ -1,32 +1,77 @@
 services:
-  # oracle-db-local:
-  #   image: gvenzl/oracle-xe
-  #   container_name: oracle-db-local
-  #   ports:
-  #     - "1521:1521"
-  #   environment:
-  #     - ORACLE_PASSWORD=transporte_pass
-  #     - APP_USER=transporte_user
-  #     - APP_USER_PASSWORD=transporte_pass
-  #   volumes:
-  #     - oracle_data:/opt/oracle/oradata
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "sqlplus -L system/transporte_pass@//localhost:1521/xepdb1 'select 1 from dual;'"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 10
-  #     start_period: 30s
+  # Base de Datos Oracle
+  oracle-db:
+    image: gvenzl/oracle-xe:latest
+    container_name: oracle-db
+    platform: linux/amd64 # Necesario para Mac M1/M2/M3
+    ports:
+      - "1521:1521"
+    environment:
+      - ORACLE_PASSWORD=secret
+      - APP_USER=transporte_user
+      - APP_USER_PASSWORD=transporte_pass
+    healthcheck:
+      # Oracle tarda en estar listo; este comando verifica que el listener esté arriba
+      test: ["CMD", "healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+    networks:
+      - transporte-network
 
+  # RabbitMQ - Sistema de mensajería
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - transporte-network
+
+  # Backend - Tu aplicación
   backend:
     build: .
-    container_name: backend-local
+    container_name: backend
     ports:
       - "8080:8080"
-    env_file:
-      - .env
-    # depends_on:
-    #   oracle-db-local:
-    #     condition: service_healthy
+    environment:
+      # Conexión a Oracle (Usando el nombre del servicio)
+      - SPRING_DATASOURCE_URL=jdbc:oracle:thin:@oracle-db:1521/XE
+      - SPRING_DATASOURCE_USERNAME=SYSTEM
+      - SPRING_DATASOURCE_PASSWORD=secret
+      # Variables de RabbitMQ
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASS=guest
+      # --- CONFIGURACIÓN DE AZURE ---
+      - AZURE_TENANT_NAME=EmpresaDuoc
+      - AZURE_POLICY_NAME=B2C_1_B5_DUOC_FLOW
+      - AZURE_CLIENT_ID=7f588d12-6261-4a95-b9ee-f2a0a329259a
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      oracle-db:
+        condition: service_healthy
+    networks:
+      - transporte-network
+    volumes:
+      - horarios-data:/app/data/horarios
+
+networks:
+  transporte-network:
+    driver: bridge
 
 volumes:
-  oracle_data:
+  horarios-data:
+  # Opcional: Persistir los datos de Oracle para no perderlos al bajar el contenedor
+  oracle-volume:

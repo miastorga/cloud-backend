@@ -1,27 +1,29 @@
 package com.example.demo.controller;
-import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
-
+import com.example.demo.dto.HorarioEventoDTO;
 import com.example.demo.model.Horario;
 import com.example.demo.repository.HorarioRepository;
+import com.example.demo.service.HorarioProducerService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
+/**
+ * Controlador actualizado que TAMBIÉN usa RabbitMQ
+ * para notificar cambios de horarios
+ */
 @RestController
 @RequestMapping("/api/horarios")
-@CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE})public class HorarioController {
+@CrossOrigin(origins = "*")
+public class HorarioController {
     
     @Autowired
     private HorarioRepository horarioRepository;
+    
+    @Autowired
+    private HorarioProducerService producerService;
     
     @GetMapping
     public List<Horario> listarHorarios() {
@@ -38,19 +40,65 @@ import com.example.demo.repository.HorarioRepository;
         return horarioRepository.findByParadaOrigen(origen);
     }
     
+    /**
+     * Crear horario Y enviar notificación a RabbitMQ
+     */
     @PostMapping
     public Horario crearHorario(@RequestBody Horario horario) {
-        return horarioRepository.save(horario);
+        // Guardar en base de datos
+        Horario guardado = horarioRepository.save(horario);
+        
+        // Enviar evento a RabbitMQ para generar JSON
+        HorarioEventoDTO evento = new HorarioEventoDTO();
+        evento.setBusId(guardado.getBus().getId());
+        evento.setParadaOrigen(guardado.getParadaOrigen());
+        evento.setParadaDestino(guardado.getParadaDestino());
+        evento.setHoraSalida(guardado.getHoraSalida());
+        evento.setHoraLlegada(guardado.getHoraLlegadaEstimada());
+        evento.setTipoEvento("NUEVO_HORARIO");
+        
+        producerService.enviarEvento(evento);
+        
+        return guardado;
     }
     
     @PutMapping("/{id}")
     public Horario actualizarHorario(@PathVariable Long id, @RequestBody Horario horario) {
         horario.setId(id);
-        return horarioRepository.save(horario);
+        Horario actualizado = horarioRepository.save(horario);
+        
+        // Notificar actualización
+        HorarioEventoDTO evento = new HorarioEventoDTO();
+        evento.setBusId(actualizado.getBus().getId());
+        evento.setParadaOrigen(actualizado.getParadaOrigen());
+        evento.setParadaDestino(actualizado.getParadaDestino());
+        evento.setHoraSalida(actualizado.getHoraSalida());
+        evento.setHoraLlegada(actualizado.getHoraLlegadaEstimada());
+        evento.setTipoEvento("ACTUALIZACION_HORARIO");
+        evento.setMotivo("Horario actualizado");
+        
+        producerService.enviarEvento(evento);
+        
+        return actualizado;
     }
     
     @DeleteMapping("/{id}")
     public void eliminarHorario(@PathVariable Long id) {
         horarioRepository.deleteById(id);
+    }
+    
+    /**
+     * NUEVO: Endpoint para reportar cambios de ruta o retrasos
+     */
+    @PostMapping("/evento")
+    public ResponseEntity<String> reportarEvento(@RequestBody HorarioEventoDTO evento) {
+        try {
+            // Enviar a RabbitMQ para generar JSON
+            producerService.enviarEvento(evento);
+            return ResponseEntity.ok("Evento registrado correctamente");
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                .body("Error: " + e.getMessage());
+        }
     }
 }
