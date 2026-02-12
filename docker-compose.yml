@@ -1,25 +1,26 @@
+version: '3.8'
+
 services:
-  # Base de Datos Oracle
   oracle-db:
     image: gvenzl/oracle-xe:latest
     container_name: oracle-db
-    platform: linux/amd64 # Necesario para Mac M1/M2/M3
+    platform: linux/amd64
     ports:
       - "1521:1521"
     environment:
       - ORACLE_PASSWORD=secret
       - APP_USER=transporte_user
       - APP_USER_PASSWORD=transporte_pass
+    volumes:
+      - oracle-data:/opt/oracle/oradata
     healthcheck:
-      # Oracle tarda en estar listo; este comando verifica que el listener esté arriba
       test: ["CMD", "healthcheck.sh"]
       interval: 30s
       timeout: 10s
-      retries: 10
+      retries: 20
     networks:
       - transporte-network
 
-  # RabbitMQ - Sistema de mensajería
   rabbitmq:
     image: rabbitmq:3.12-management
     container_name: rabbitmq
@@ -37,23 +38,25 @@ services:
     networks:
       - transporte-network
 
-  # Backend - Tu aplicación
   backend:
     build: .
     container_name: backend
     ports:
       - "8080:8080"
     environment:
-      # Conexión a Oracle (Usando el nombre del servicio)
-      - SPRING_DATASOURCE_URL=jdbc:oracle:thin:@oracle-db:1521/XE
-      - SPRING_DATASOURCE_USERNAME=SYSTEM
-      - SPRING_DATASOURCE_PASSWORD=secret
-      # Variables de RabbitMQ
+      # CAMBIO CLAVE: Usamos xepdb1 que es donde vive tu usuario
+      - SPRING_DATASOURCE_URL=jdbc:oracle:thin:@oracle-db:1521/xepdb1
+      - SPRING_DATASOURCE_USERNAME=transporte_user
+      - SPRING_DATASOURCE_PASSWORD=transporte_pass
+      # AÑADE ESTA LÍNEA:
+      - SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.OracleDialect
+      # Opcional pero recomendado para ver qué está pasando:
+      - SPRING_JPA_SHOW_SQL=true
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=5672
       - RABBITMQ_USER=guest
       - RABBITMQ_PASS=guest
-      # --- CONFIGURACIÓN DE AZURE ---
       - AZURE_TENANT_NAME=EmpresaDuoc
       - AZURE_POLICY_NAME=B2C_1_B5_DUOC_FLOW
       - AZURE_CLIENT_ID=7f588d12-6261-4a95-b9ee-f2a0a329259a
@@ -73,5 +76,4 @@ networks:
 
 volumes:
   horarios-data:
-  # Opcional: Persistir los datos de Oracle para no perderlos al bajar el contenedor
-  oracle-volume:
+  oracle-data:

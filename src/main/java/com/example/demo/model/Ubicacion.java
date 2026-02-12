@@ -8,10 +8,10 @@ import java.time.LocalDateTime;
 @Data
 @Table(name = "UBICACIONES")
 public class Ubicacion {
-    
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+@Id
+@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "UBICACIONES_SEQ_GEN")
+@SequenceGenerator(name = "UBICACIONES_SEQ_GEN", sequenceName = "UBICACIONES_SEQ", allocationSize = 1)
+private Long id;
     
     @Column(name = "bus_id")
     private Long busId;
@@ -19,7 +19,8 @@ public class Ubicacion {
     private String patente;
     private Double latitud;
     private Double longitud;
-    private LocalDateTime timestamp;
-    private String velocidad;
+    @Column(name = "FECHA_HORA") // Cambiamos el nombre de la columna, no del atributo
+    private LocalDateTime timestamp;  
+      private String velocidad;
     private String direccion;
 }
