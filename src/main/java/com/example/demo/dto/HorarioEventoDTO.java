@@ -4,9 +4,6 @@ import lombok.Data;
 import java.io.Serializable;
 import java.time.LocalTime;
 
-/**
- * DTO para eventos de horarios/rutas
- */
 @Data
 public class HorarioEventoDTO implements Serializable {
     private Long busId;

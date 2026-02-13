@@ -13,25 +13,17 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-/**
- * CONSUMIDOR 2: Escucha eventos de horarios de RabbitMQ 
- * y genera archivos JSON
- */
 @Component
 public class HorarioConsumer {
     
     private final ObjectMapper objectMapper;
-    private final String outputPath = "data/horarios"; // Ruta relativa
+    private final String outputPath = "data/horarios"; 
     
     public HorarioConsumer() {
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new JavaTimeModule());
     }
     
-    /**
-     * Este método se ejecuta AUTOMÁTICAMENTE cada vez que llega 
-     * un mensaje a la cola "horarios-queue"
-     */
     @RabbitListener(queues = "horarios-queue")
     public void procesarHorario(HorarioEventoDTO evento) {
         try {
@@ -40,13 +32,11 @@ public class HorarioConsumer {
             System.out.println("   Tipo: " + evento.getTipoEvento());
             System.out.println("   Motivo: " + evento.getMotivo());
             
-            // Crear directorio si no existe
             Path directory = Paths.get(outputPath);
             if (!Files.exists(directory)) {
                 Files.createDirectories(directory);
             }
             
-            // Generar nombre de archivo
             String timestamp = LocalDateTime.now()
                 .format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
             String fileName = String.format("horario_%s_%s.json", 
@@ -54,7 +44,6 @@ public class HorarioConsumer {
             
             File file = new File(directory.toFile(), fileName);
             
-            // Escribir JSON
             objectMapper.writerWithDefaultPrettyPrinter()
                 .writeValue(file, evento);
             

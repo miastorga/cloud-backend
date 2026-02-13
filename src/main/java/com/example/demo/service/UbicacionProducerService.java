@@ -6,18 +6,12 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-/**
- * PRODUCTOR 1: Envía ubicaciones GPS a RabbitMQ
- */
 @Service
 public class UbicacionProducerService {
     
     @Autowired
     private RabbitTemplate rabbitTemplate;
     
-    /**
-     * Enviar ubicación a la cola de RabbitMQ
-     */
     public void enviarUbicacion(Ubicacion ubicacion) {
         rabbitTemplate.convertAndSend(RabbitMQConfig.UBICACIONES_QUEUE, ubicacion);
         System.out.println("✅ Ubicación enviada a RabbitMQ: Bus " + ubicacion.getPatente());

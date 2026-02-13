@@ -10,10 +10,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * Controlador actualizado que TAMBIÉN usa RabbitMQ
- * para notificar cambios de horarios
- */
 @RestController
 @RequestMapping("/api/horarios")
 @CrossOrigin(origins = "*")
@@ -40,15 +36,10 @@ public class HorarioController {
         return horarioRepository.findByParadaOrigen(origen);
     }
     
-    /**
-     * Crear horario Y enviar notificación a RabbitMQ
-     */
     @PostMapping
     public Horario crearHorario(@RequestBody Horario horario) {
-        // Guardar en base de datos
         Horario guardado = horarioRepository.save(horario);
         
-        // Enviar evento a RabbitMQ para generar JSON
         HorarioEventoDTO evento = new HorarioEventoDTO();
         evento.setBusId(guardado.getBus().getId());
         evento.setParadaOrigen(guardado.getParadaOrigen());
@@ -67,7 +58,6 @@ public class HorarioController {
         horario.setId(id);
         Horario actualizado = horarioRepository.save(horario);
         
-        // Notificar actualización
         HorarioEventoDTO evento = new HorarioEventoDTO();
         evento.setBusId(actualizado.getBus().getId());
         evento.setParadaOrigen(actualizado.getParadaOrigen());
@@ -87,13 +77,9 @@ public class HorarioController {
         horarioRepository.deleteById(id);
     }
     
-    /**
-     * NUEVO: Endpoint para reportar cambios de ruta o retrasos
-     */
     @PostMapping("/evento")
     public ResponseEntity<String> reportarEvento(@RequestBody HorarioEventoDTO evento) {
         try {
-            // Enviar a RabbitMQ para generar JSON
             producerService.enviarEvento(evento);
             return ResponseEntity.ok("Evento registrado correctamente");
         } catch (Exception e) {

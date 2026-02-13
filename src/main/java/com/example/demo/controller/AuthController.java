@@ -25,9 +25,6 @@ public class AuthController {
     @Value("${azure.b2c.policy}")
     private String policy;
 
-    /**
-     * Endpoint público que retorna la configuración para login
-     */
     @GetMapping("/public/auth/config")
     public ResponseEntity<Map<String, String>> getAuthConfig() {
         Map<String, String> config = new HashMap<>();
@@ -39,9 +36,6 @@ public class AuthController {
         return ResponseEntity.ok(config);
     }
 
-    /**
-     * Endpoint protegido que retorna información del usuario autenticado
-     */
     @GetMapping("/auth/user")
     public ResponseEntity<Map<String, Object>> getUserInfo(@AuthenticationPrincipal Jwt jwt) {
         log.info("Usuario autenticado: {}", jwt.getSubject());
@@ -56,9 +50,6 @@ public class AuthController {
         return ResponseEntity.ok(userInfo);
     }
 
-    /**
-     * Health check público
-     */
     @GetMapping("/public/health")
     public ResponseEntity<String> health() {
         return ResponseEntity.ok("OK");
