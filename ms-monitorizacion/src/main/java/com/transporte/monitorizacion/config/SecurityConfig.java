@@ -23,6 +23,9 @@ public class SecurityConfig {
 				.csrf(csrf -> csrf.disable())
 				.authorizeHttpRequests(auth -> auth
 						.requestMatchers("/api/public/**").permitAll()
+						.requestMatchers("/api/buses/**").permitAll()
+						.requestMatchers("/api/ubicaciones/**").permitAll()
+						.requestMatchers("/api/horarios/**").permitAll()
 						.anyRequest().authenticated())
 				.oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> {
 				}));
