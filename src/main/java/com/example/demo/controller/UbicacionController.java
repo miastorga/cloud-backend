@@ -14,13 +14,13 @@ import java.util.List;
 @RequestMapping("/api/ubicaciones")
 @CrossOrigin(origins = "*")
 public class UbicacionController {
-    
+
     @Autowired
     private UbicacionProducerService producerService;
-    
+
     @Autowired
     private UbicacionRepository ubicacionRepository;
-    
+
     @PostMapping
     public ResponseEntity<String> recibirUbicacion(@RequestBody Ubicacion ubicacion) {
         try {
@@ -29,36 +29,35 @@ public class UbicacionController {
             if (ubicacion.getLatitud() == null || ubicacion.getLongitud() == null) {
                 return ResponseEntity.badRequest().body("Latitud y longitud son obligatorias");
             }
-            
+
             if (ubicacion.getTimestamp() == null) {
                 ubicacion.setTimestamp(LocalDateTime.now());
             }
 
-            System.out.println("🔵 CONTROLADOR: Enviando a RabbitMQ...");
-            
+            System.out.println("🔵 CONTROLADOR: Enviando a Kafka...");
+
             producerService.enviarUbicacion(ubicacion);
             System.out.println("🔵 CONTROLADOR: Enviado exitosamente");
 
-            
             return ResponseEntity.ok("Ubicación enviada a procesamiento");
-            
+
         } catch (Exception e) {
             System.err.println("❌ ERROR en controlador: " + e.getMessage());
             return ResponseEntity.internalServerError()
-                .body("Error: " + e.getMessage());
+                    .body("Error: " + e.getMessage());
         }
     }
-    
+
     @GetMapping
     public List<Ubicacion> obtenerUbicaciones() {
         return ubicacionRepository.findAll();
     }
-    
+
     @GetMapping("/bus/{busId}")
     public List<Ubicacion> obtenerUbicacionesPorBus(@PathVariable Long busId) {
         return ubicacionRepository.findByBusId(busId);
     }
-    
+
     @GetMapping("/patente/{patente}")
     public List<Ubicacion> obtenerUbicacionesPorPatente(@PathVariable String patente) {
         return ubicacionRepository.findByPatente(patente);
